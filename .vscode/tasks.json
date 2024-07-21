@@ -9,7 +9,7 @@
                 "-g",
                 "*.cpp",
                 "-o",
-                "${fileDirname}\\Frandask's DB.exe"
+                "${fileDirname}\\Frandask_DB.exe"
             ],
             "options": {
                 "cwd": "${fileDirname}"

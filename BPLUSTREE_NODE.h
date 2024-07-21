@@ -1,32 +1,29 @@
 //B+树节点定义
+#ifndef BPLUSTREE_NODE_H
+#define BPLUSTREE_NODE_H
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include <fstream>
-
-using namespace std;
-
-const int MAX_NODE_SIZE = 10;
-
-using dl = streampos;
-
+#include "OTHER_DEFINE.h"
 template <typename KeyType>
 class BPT_NODE{
     public:
         bool is_leaf;   //该节点是否为叶节点
-        BPT_NODE * parent;      //父节点
-        vector <BPT_NODE *> children;  //子节点
-        BPT_NODE * next;    //下个节点
-        vector <KeyType> keys;  //节点的键值
-        vector <dl> values;  //叶结点中存放数据在数据文件中的位置
+        dl parent = -1;      //父节点
+        KeyType children[MAX_NODE_SIZE + 1];  //子节点
+        dl next = -1;    //下个节点
+        KeyType keys[MAX_NODE_SIZE + 1];  //节点的键值
+        dl values[MAX_NODE_SIZE + 1];  //叶结点中存放数据在数据文件中的位置
         int node_size;
         //构造函数
-        BPT_NODE(bool is_leaf_ = false, BPT_NODE * next_ = nullptr, int node_size_ = 0,
-         BPT_NODE * parent_ = nullptr){
+        BPT_NODE(bool is_leaf_ = false, dl parent_ = -1, dl next_ =-1, int node_size_ = 0){
             is_leaf = is_leaf_;
+            parent = parent_;
             next = next_;
             node_size = node_size_;
-            parent = parent_;
+            memset(keys, 0, sizeof(keys));
+            memset(values, 0, sizeof(values));
+            memset(children, 0, sizeof(children));
         }
+
 };
+
+#endif

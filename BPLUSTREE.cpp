@@ -1,66 +1,230 @@
 //B+树方法实现
 
 #include "BPLUSTREE.h"
-
-
+//插入操作
+string file_name = "test.dat";
+//查找在节点中的位置
 template <typename KeyType>
-int BPT <KeyType> ::find_index(BPT_NODE<KeyType>* parent, BPT_NODE<KeyType>* child) const {
-    auto it = std::find(parent->children.begin(), parent->children.end(), child);
-    return it - parent->children.begin();
+dl BPT<KeyType>::find_index(dl node_dl, const KeyType& key) const{
+    BPT_NODE<KeyType> node;
+    read_node(node_dl, node);
+    int i = upper_bound(node.keys, node.keys + node.node_size, key) - node.keys;
+    return i;
 }
 
+// 查找叶子节点
 template <typename KeyType>
-BPT_NODE <KeyType> * BPT<KeyType>::search_leaf(BPT_NODE<KeyType>* node, const KeyType& key) const {
-    while (! node -> is_leaf) {
-        // 在内部节点中查找适当的子节点
-        auto it = upper_bound(node->keys.begin(), node->keys.end(), key);
-        int index = it - node->keys.begin();
-        node = node->children[index];
-    }
-    return node;
-}
-
-template <typename KeyType>
-void BPT <KeyType>::insertkey(const KeyType& key, dl value) {
-    if (root == nullptr) {
-        // 如果树为空，创建根节点
-        root = new BPT_NODE<KeyType>(true);
-        root->keys.push_back(key);
-        root->values.push_back(value);
-    } else {
-        // 找到适当的叶节点
-        BPT_NODE<KeyType>* leaf = search_leaf(root, key);
-        
-        // 在叶节点中插入
-        insert_in_leaf(leaf, key, value);
-    }
-}
-
-template <typename KeyType>
-void BPT<KeyType>::insert_notfull(BPT_NODE<KeyType>* node, const KeyType& key, dl value){
-    //先判断是否是叶节点
-    if(node->is_leaf){
-        //在叶节点插入
-        //判断是否满了，满了就先分裂
-        if(node -> keys.size() == MAX_NODE_SIZE - 1){
-            splitchild(node -> parent, find_index(node -> parent, node));
-            //分裂完后判断插入的键值在左边还是右边
-            int index = find_index(node -> parent, node);
-            if(key > node -> parent -> keys[index])
-                node = node -> parent -> children[index + 1];
-        }
-
-        //插入键值对
-        auto it = lower_bound(node -> keys.begin(), node -> keys.end(), key);
-        int index = it - node -> keys.begin();
-        node -> keys.insert(it, key);
-        node -> values.insert(node -> values.begin() + index, value);
+dl BPT<KeyType>::search_leaf(dl node_dl, const KeyType& key) const{
+    BPT_NODE<KeyType> node;
+    read_node(node_dl, node);
+    if (node.is_leaf){
+        return node_dl;
     }
     else{
-        //在内部节点中插入
-        auto it = upper_bound(node -> keys.begin(), node -> keys.end(), key);
-        int index = it - node -> keys.begin();
-        //分裂
+        int i = upper_bound(node.keys, node.keys + node.node_size, key) - node.keys;
+        return search_leaf(node.children[i], key);
     }
+}
+
+template <typename KeyType>
+void BPT<KeyType>::insertkey(const KeyType& key, dl value){
+    //如果树空，创造根节点
+    if (tree_info.root_dl == 0){
+        BPT_NODE<KeyType> new_root(true);
+        new_root.keys[0] = key;
+        new_root.values[0] = value;
+        new_root.node_size = 1;
+        new_root.parent = 0;
+        tree_info.root_dl = tree_info.slot;
+        write_node(tree_info.root_dl, new_root);
+        tree_info.leaf_dl = tree_info.root_dl;
+        tree_info.slot += sizeof(BPT_NODE<KeyType>);
+        save_tree();
+        return;
+    }
+    else{
+        dl aim_dl = search_leaf(tree_info.root_dl, key);
+        insert_notfull(aim_dl, key, value);
+    }
+}
+
+//插入非满节点
+template <typename KeyType>
+void BPT<KeyType>::insert_notfull(dl node_dl, const KeyType& key, dl value){
+    BPT_NODE<KeyType> node;
+    read_node(node_dl, node);
+    if(node.is_leaf){
+        int index = find_index(node_dl, key);
+
+        if(node.node_size > 0){
+            std::move_backward(node.keys + index, node.keys + node.node_size, node.keys + node.node_size + 1);
+            std::move_backward(node.values + index, node.values + node.node_size, node.values + node.node_size + 1);
+        }
+        node.keys[index] = key;
+        node.values[index] = value;
+        node.node_size ++;
+        write_node(node_dl, node);
+        if (node.node_size == MAX_NODE_SIZE){
+            splitnode(node_dl);
+        }
+    }
+    else{
+        int index = find_index(node_dl, key);
+
+        if(node.node_size > 0){
+            std::move_backward(node.keys + index, node.keys + node.node_size, node.keys + node.node_size + 1);
+            std::move_backward(node.values + index, node.values + node.node_size, node.values + node.node_size + 1);
+        }
+        node.keys[index] = key;
+        node.children[index] = value;
+        node.node_size ++;
+        write_node(node_dl, node);
+        if (node.node_size == MAX_NODE_SIZE){
+            splitnode(node_dl);
+        }        
+    }
+}
+
+//节点分裂
+template <typename KeyType>
+void BPT<KeyType>::splitnode(dl node_dl){
+    BPT_NODE<KeyType> node;
+    read_node(node_dl, node);
+    //叶节点的分裂
+    if(node.is_leaf){
+        split_leaf_node(node_dl);
+    }
+    else{
+        split_internal_node(node_dl);
+    }
+}
+
+// 分裂叶子节点
+template <typename KeyType>
+void BPT<KeyType>::split_leaf_node(dl node_dl) {
+    BPT_NODE<KeyType> node;
+    read_node(node_dl, node);
+
+    BPT_NODE<KeyType> new_node(true);
+    int mid = SPLIT_LOC;
+
+    // 复制到新节点
+    std::move(node.keys + mid, node.keys + node.node_size, new_node.keys);
+    std::move(node.values + mid, node.values + node.node_size, new_node.values);
+    new_node.parent = node.parent;
+    new_node.next = node.next;
+    new_node.node_size = node.node_size - mid;
+    node.node_size = mid;
+
+    // 更新当前节点
+    
+
+    // 插入到父节点
+    dl new_node_dl = tree_info.slot;
+    node.next = new_node_dl;
+    tree_info.slot += sizeof(BPT_NODE<KeyType>);
+    
+
+    // 更新父节点
+    if (node_dl == tree_info.root_dl) {
+        // 如果是根节点，则需要创建新的根节点
+        BPT_NODE<KeyType> new_root(false);
+        new_root.keys[0] = new_node.keys[0];
+        new_root.children[0] = node_dl;
+        new_root.children[1] = new_node_dl;
+        new_root.node_size = 1;
+
+        tree_info.root_dl = tree_info.slot;
+        tree_info.slot += sizeof(BPT_NODE<KeyType>);
+        
+        node.parent = tree_info.root_dl;
+        new_node.parent = tree_info.root_dl;
+        write_node(node_dl, node);
+        write_node(new_node_dl, new_node);
+        write_node(tree_info.root_dl, new_root);
+        save_tree();
+    } else {
+        // 否则，插入新键值到父节点
+        write_node(node_dl, node);
+        write_node(new_node_dl, new_node);
+        insert_notfull(node.parent, new_node.keys[0], new_node_dl);
+    }
+}
+
+
+//分裂内部节点
+template <typename KeyType>
+void BPT<KeyType>::split_internal_node(dl node_dl) {
+    return;
+}
+
+
+
+
+
+template <typename KeyType>
+BPT<KeyType>::BPT() {
+    initialize_tree();
+}
+
+template <typename KeyType>
+BPT<KeyType>::~BPT() {
+    save_tree();
+}
+//文件操作
+template <typename KeyType>
+void BPT<KeyType>::initialize_tree(){
+    ifstream meta_file(file_name, std::ios::binary);
+    if (!meta_file) {
+        std::cerr << "Error opening metadata file for reading" << std::endl;
+        return;
+    }
+    meta_file.seekg(0, ios::beg);
+    meta_file.read(reinterpret_cast<char*>(&tree_info), sizeof(tree_infos));
+    if (tree_info.slot == 0)
+        tree_info.slot = START_DL;
+    meta_file.close();
 
 }
+
+//保存B+树
+template <typename KeyType>
+void BPT<KeyType>::save_tree(){
+    std::ofstream meta_file(file_name, std::ios::in | std::ios::out);
+    if (!meta_file) {
+        std::cerr << "Error opening metadata file for writing" << std::endl;
+        return;
+    }
+    meta_file.seekp(0, ios::beg);
+    meta_file.write(reinterpret_cast<const char*>(&tree_info), sizeof(TREEINFOS));
+    meta_file.close();
+
+    std::cout << "Tree metadata saved successfully." << std::endl;    
+}
+// 读取节点
+template <typename KeyType>
+void BPT<KeyType>::read_node(dl node_dl, BPT_NODE<KeyType>& node) const{
+    ifstream meta_file(file_name, std::ios::binary);
+    if (!meta_file) {
+        cerr << "Error opening file for reading" << endl;
+        return;
+    }
+    meta_file.seekg(node_dl, ios::beg);
+    meta_file.read(reinterpret_cast<char*>(&node), sizeof(BPT_NODE<KeyType>));
+    meta_file.close();
+}
+
+// 写入节点
+template <typename KeyType>
+void BPT<KeyType>::write_node(dl node_dl, const BPT_NODE<KeyType>& node) const{
+    ofstream meta_file(file_name, std::ios::in | std::ios::out);
+    if (!meta_file) {
+        cerr << "Error opening file for writing" << endl;
+        return;
+    }
+    meta_file.seekp(node_dl, ios::beg);
+    meta_file.write(reinterpret_cast<const char*>(&node), sizeof(BPT_NODE<KeyType>));
+    meta_file.close();
+}
+
+template class BPT<int>;
