@@ -7,11 +7,11 @@ template <typename KeyType>
 class BPT_NODE{
     public:
         bool is_leaf;   //该节点是否为叶节点
-        dl parent = -1;      //父节点
-        KeyType children[MAX_NODE_SIZE + 1];  //子节点
-        dl next = -1;    //下个节点
-        KeyType keys[MAX_NODE_SIZE + 1];  //节点的键值
-        dl values[MAX_NODE_SIZE + 1];  //叶结点中存放数据在数据文件中的位置
+        dl parent;      //父节点
+        KeyType children[MAX_NODE_SIZE + 3];  //子节点
+        dl next;    //下个节点
+        KeyType keys[MAX_NODE_SIZE + 3];  //节点的键值
+        dl values[MAX_NODE_SIZE + 3];  //叶结点中存放数据在数据文件中的位置
         int node_size;
         //构造函数
         BPT_NODE(bool is_leaf_ = false, dl parent_ = -1, dl next_ =-1, int node_size_ = 0){

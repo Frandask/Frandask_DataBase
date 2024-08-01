@@ -22,6 +22,8 @@ class BPT{
         dl search(dl node_dl, const KeyType & key) const;   //寻找节点位置
         void read_node(dl node_dl, BPT_NODE<KeyType>& node) const ;
         void write_node(dl node_dl, const BPT_NODE<KeyType>& node) const;
+        
+        void reset_parent(dl node_dl); //内部节点分裂时重新设置子节点的父节点
     public:
         BPT();
         ~BPT();
@@ -31,6 +33,8 @@ class BPT{
         dl search(const KeyType & key) const;
         void traveltree() const;
         void deletekey(const KeyType& key);
+        void traverse() const;
+        void travelleaf() const;
 };
 
 #endif

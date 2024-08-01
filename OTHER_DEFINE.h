@@ -26,5 +26,5 @@ struct TREEINFOS{
 };
 
 const size_t START_DL = sizeof(tree_infos);
-const int SPLIT_LOC = (BP_ORDER + 1) / 2 - 1;
+const int SPLIT_LOC = (BP_ORDER + 1) / 2;
 #endif 
