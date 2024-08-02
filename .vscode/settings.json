@@ -57,6 +57,7 @@
         "optional": "cpp",
         "queue": "cpp",
         "ranges": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "random": "cpp"
     }
 }

@@ -3,6 +3,7 @@
 #define BPLUSTREE_NODE_H
 
 #include "OTHER_DEFINE.h"
+#pragma pack(push, 4) 
 template <typename KeyType>
 class BPT_NODE{
     public:
@@ -26,4 +27,5 @@ class BPT_NODE{
 
 };
 
+#pragma pack(pop)
 #endif
